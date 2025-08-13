@@ -26,7 +26,7 @@ class LinkState {
           isSelected == other.isSelected;
 
   @override
-  int get hashCode => isHovered.hashCode ^ isSelected.hashCode;
+  int get hashCode => isHovered.hashCode ^ (isSelected.hashCode << 1);
 }
 
 /// A link is a connection between two ports.
