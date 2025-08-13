@@ -1,6 +1,7 @@
 import 'package:fl_nodes/fl_nodes.dart';
 import 'package:fl_nodes/src/core/controller/project.dart';
 import 'package:fl_nodes/src/core/controller/runner.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -125,6 +126,16 @@ abstract class PortPrototype {
   });
 
   bool compatibleWith(PortPrototype other);
+
+  // maybe this should compare the [runtimeType] for exact identity?
+  @override
+  @nonVirtual // implementers should *not* base identity on anything BUT id
+  bool operator ==(Object other) =>
+      other is PortPrototype && other.idName == idName;
+
+  @override
+  @nonVirtual // implementers should *not* base identity on anything BUT id
+  int get hashCode => idName.hashCode;
 }
 
 class DataInputPortPrototype<T> extends PortPrototype {
@@ -282,6 +293,12 @@ final class PortInstance {
 
     return instance;
   }
+
+  @override
+  bool operator ==(Object other) => other is PortInstance && other.key == key;
+
+  @override
+  int get hashCode => key.hashCode;
 }
 
 typedef OnVisualizerTap = Function(
@@ -320,6 +337,16 @@ class FieldPrototype {
     this.onVisualizerTap,
     this.editorBuilder,
   }) : assert(onVisualizerTap != null || editorBuilder != null);
+
+  // maybe this should compare the [runtimeType] for exact identity?
+  @override
+  @nonVirtual // implementers should *not* base identity on anything BUT id
+  bool operator ==(Object other) =>
+      other is FieldPrototype && other.idName == idName;
+
+  @override
+  @nonVirtual // implementers should *not* base identity on anything BUT id
+  int get hashCode => idName.hashCode;
 }
 
 /// A field is a variable that can be used in the onExecute function of a node.
@@ -365,6 +392,12 @@ class FieldInstance {
   FieldInstance copyWith({dynamic data}) {
     return FieldInstance(prototype: prototype, data: data ?? this.data);
   }
+
+  @override
+  bool operator ==(Object other) => other is FieldInstance && other.key == key;
+
+  @override
+  int get hashCode => key.hashCode;
 }
 
 /// A node prototype is the blueprint for a node instance.
@@ -390,6 +423,13 @@ final class NodePrototype {
     this.fields = const [],
     required this.onExecute,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      other is NodePrototype && other.idName == idName;
+
+  @override
+  int get hashCode => idName.hashCode;
 }
 
 /// The state of a node widget.
@@ -542,6 +582,12 @@ final class NodeInstance {
 
     return instance;
   }
+
+  @override
+  bool operator ==(Object other) => other is NodeInstance && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 PortInstance createPort(String idName, PortPrototype prototype) {
