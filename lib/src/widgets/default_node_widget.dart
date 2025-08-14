@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 
 import 'package:flutter_context_menu/flutter_context_menu.dart';
 
@@ -55,9 +54,6 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
 
   // Timer for auto-scrolling when dragging near the edge.
   Timer? _edgeTimer;
-
-  // The last known position of the pointer (GestureDetector).
-  Offset? _lastPanPosition;
 
   // Temporary link locator used during linking.
   _TempLink? _tempLink;
@@ -396,61 +392,79 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
     overlay.insert(overlayEntry);
   }
 
+  void selectNode() {
+    if (!widget.node.state.isSelected) {
+      widget.controller.selectNodesById({widget.node.id});
+    }
+  }
+
   Widget controlsWrapper(Widget child) {
+    /// Called when right-clicking (or long-pressing on mobile) on the node
+    void onNodeContextGesture(Offset position) {
+      _onTmpLinkCancel();
+
+      final locator = _isNearPort(position);
+
+      selectNode();
+
+      if (locator != null) {
+        createAndShowContextMenu(
+          context,
+          entries: _portContextMenuEntries(position, locator: locator),
+          position: position,
+        );
+      } else if (!isContextMenuVisible) {
+        final entries = widget.contextMenuBuilder != null
+            ? widget.contextMenuBuilder!(context, widget.node)
+            : _defaultNodeContextMenuEntries();
+        createAndShowContextMenu(
+          context,
+          entries: entries,
+          position: position,
+        );
+      }
+    }
+
+    void onDragStart(Offset startPosition) {
+      _onTmpLinkCancel();
+
+      final nearestPort = _isNearPort(startPosition);
+      if (nearestPort != null) {
+        _isLinking = true;
+        _onTmpLinkStart(nearestPort);
+      } else {
+        selectNode();
+      }
+    }
+
+    void onDragEnd(Offset endPosition) {
+      if (!_isLinking) {
+        _resetEdgeTimer();
+        return;
+      }
+
+      final locator = _isNearPort(endPosition);
+      if (locator != null) {
+        _onTmpLinkEnd(locator);
+      } else {
+        createAndShowContextMenu(
+          context,
+          entries: _createSubmenuEntries(endPosition),
+          position: endPosition,
+          onDismiss: (value) => _onTmpLinkCancel(),
+        );
+      }
+    }
+
     return defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS
         ? GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTap: () {
-              if (!widget.node.state.isSelected) {
-                widget.controller.selectNodesById({widget.node.id});
-              }
-            },
-            onLongPressStart: (details) {
-              final position = details.globalPosition;
-              final locator = _isNearPort(position);
-
-              if (!widget.node.state.isSelected) {
-                widget.controller.selectNodesById({widget.node.id});
-              }
-
-              if (locator != null && !widget.node.state.isCollapsed) {
-                createAndShowContextMenu(
-                  context,
-                  entries: _portContextMenuEntries(position, locator: locator),
-                  position: position,
-                );
-              } else if (!isContextMenuVisible) {
-                final entries = widget.contextMenuBuilder != null
-                    ? widget.contextMenuBuilder!(context, widget.node)
-                    : _defaultNodeContextMenuEntries();
-                createAndShowContextMenu(
-                  context,
-                  entries: entries,
-                  position: position,
-                );
-              }
-            },
-            onPanDown: (details) {
-              _lastPanPosition = details.globalPosition;
-            },
-            onPanStart: (details) {
-              final position = details.globalPosition;
-              _isLinking = false;
-              _tempLink = null;
-
-              final locator = _isNearPort(position);
-              if (locator != null) {
-                _isLinking = true;
-                _onTmpLinkStart(locator);
-              } else {
-                if (!widget.node.state.isSelected) {
-                  widget.controller.selectNodesById({widget.node.id});
-                }
-              }
-            },
+            onTap: selectNode,
+            onLongPressStart: (details) =>
+                onNodeContextGesture(details.globalPosition),
+            onPanStart: (details) => onDragStart(details.globalPosition),
             onPanUpdate: (details) {
-              _lastPanPosition = details.globalPosition;
               if (_isLinking) {
                 _onTmpLinkUpdate(details.globalPosition);
               } else {
@@ -458,66 +472,16 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
                 widget.controller.dragSelection(details.delta);
               }
             },
-            onPanEnd: (details) {
-              if (_isLinking) {
-                final locator = _isNearPort(_lastPanPosition!);
-                if (locator != null) {
-                  _onTmpLinkEnd(locator);
-                } else {
-                  createAndShowContextMenu(
-                    context,
-                    entries: _createSubmenuEntries(_lastPanPosition!),
-                    position: _lastPanPosition!,
-                    onDismiss: (value) => _onTmpLinkCancel(),
-                  );
-                }
-                _isLinking = false;
-              } else {
-                _resetEdgeTimer();
-              }
-            },
+            onPanEnd: (details) => onDragEnd(details.globalPosition),
             child: child,
           )
         : ImprovedListener(
             behavior: HitTestBehavior.translucent,
             onPointerPressed: (event) async {
-              _isLinking = false;
-              _tempLink = null;
-
-              final locator = _isNearPort(event.position);
               if (event.buttons == kSecondaryMouseButton) {
-                if (!widget.node.state.isSelected) {
-                  widget.controller.selectNodesById({widget.node.id});
-                }
-
-                if (locator != null && !widget.node.state.isCollapsed) {
-                  createAndShowContextMenu(
-                    context,
-                    entries: _portContextMenuEntries(
-                      event.position,
-                      locator: locator,
-                    ),
-                    position: event.position,
-                  );
-                } else if (!isContextMenuVisible) {
-                  final entries = widget.contextMenuBuilder != null
-                      ? widget.contextMenuBuilder!(context, widget.node)
-                      : _defaultNodeContextMenuEntries();
-                  createAndShowContextMenu(
-                    context,
-                    entries: entries,
-                    position: event.position,
-                  );
-                }
+                onNodeContextGesture(event.position);
               } else if (event.buttons == kPrimaryMouseButton) {
-                if (locator != null && !_isLinking && _tempLink == null) {
-                  _onTmpLinkStart(locator);
-                } else if (!widget.node.state.isSelected) {
-                  widget.controller.selectNodesById(
-                    {widget.node.id},
-                    holdSelection: HardwareKeyboard.instance.isControlPressed,
-                  );
-                }
+                onDragStart(event.position);
               }
             },
             onPointerMoved: (event) async {
@@ -528,23 +492,7 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
                 widget.controller.dragSelection(event.delta);
               }
             },
-            onPointerReleased: (event) async {
-              if (_isLinking) {
-                final locator = _isNearPort(event.position);
-                if (locator != null) {
-                  _onTmpLinkEnd(locator);
-                } else {
-                  createAndShowContextMenu(
-                    context,
-                    entries: _createSubmenuEntries(event.position),
-                    position: event.position,
-                    onDismiss: (value) => _onTmpLinkCancel(),
-                  );
-                }
-              } else {
-                _resetEdgeTimer();
-              }
-            },
+            onPointerReleased: (event) => onDragEnd(event.position),
             child: child,
           );
   }
