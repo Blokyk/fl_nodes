@@ -187,7 +187,7 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
     final worldPosition = screenToWorld(position, viewportOffset, viewportZoom);
 
     final near = Rect.fromCenter(
-      center: worldPosition!,
+      center: worldPosition,
       width: kSpatialHashingCellSize,
       height: kSpatialHashingCellSize,
     );
@@ -221,7 +221,7 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
     widget.controller.drawTempLink(
       port.prototype.styleBuilder(port.state).linkStyleBuilder(LinkState()),
       absolutePortOffset,
-      worldPosition!,
+      worldPosition,
     );
   }
 
@@ -524,7 +524,7 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
         onSelected: () {
           widget.controller.addNode(
             entry.key,
-            offset: worldPosition ?? Offset.zero,
+            offset: worldPosition,
           );
           if (fromLink) {
             final addedNode = widget.controller.nodes.values.last;

@@ -66,14 +66,13 @@ Rect? getEditorBoundsInScreen(GlobalKey key) {
 }
 
 /// Converts a screen position to a world (canvas) position.
-Offset? screenToWorld(
+Offset screenToWorld(
   Offset screenPosition,
   Offset offset,
   double zoom,
 ) {
   // Get the bounds of the editor widget on the screen
-  final nodeEditorBounds = getEditorBoundsInScreen(kNodeEditorWidgetKey);
-  if (nodeEditorBounds == null) return null;
+  final nodeEditorBounds = getEditorBoundsInScreen(kNodeEditorWidgetKey)!;
   final size = nodeEditorBounds.size;
 
   // Adjust the screen position relative to the top-left of the editor

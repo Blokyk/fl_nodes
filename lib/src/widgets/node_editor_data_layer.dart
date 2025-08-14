@@ -189,11 +189,7 @@ class _NodeEditorDataLayerState extends State<NodeEditorDataLayer>
 
     setState(() {
       _isSelecting = true;
-      _selectionStart = screenToWorld(
-        position,
-        offset,
-        zoom,
-      )!;
+      _selectionStart = screenToWorld(position, offset, zoom);
     });
   }
 
@@ -202,11 +198,7 @@ class _NodeEditorDataLayerState extends State<NodeEditorDataLayer>
       widget.controller.setSelectionArea(
         Rect.fromPoints(
           _selectionStart,
-          screenToWorld(
-            position,
-            offset,
-            zoom,
-          )!,
+          screenToWorld(position, offset, zoom),
         ),
       );
     });
@@ -243,7 +235,7 @@ class _NodeEditorDataLayerState extends State<NodeEditorDataLayer>
     );
 
     final near = Rect.fromCenter(
-      center: worldPosition!,
+      center: worldPosition,
       width: kSpatialHashingCellSize,
       height: kSpatialHashingCellSize,
     );
@@ -285,7 +277,7 @@ class _NodeEditorDataLayerState extends State<NodeEditorDataLayer>
     widget.controller.drawTempLink(
       port.prototype.styleBuilder(port.state).linkStyleBuilder(LinkState()),
       absolutePortOffset,
-      worldPosition!,
+      worldPosition,
     );
   }
 
@@ -546,7 +538,7 @@ class _NodeEditorDataLayerState extends State<NodeEditorDataLayer>
           onSelected: () {
             widget.controller.addNode(
               entry.key,
-              offset: worldPosition ?? Offset.zero,
+              offset: worldPosition,
             );
 
             if (fromLink) {
@@ -577,11 +569,7 @@ class _NodeEditorDataLayerState extends State<NodeEditorDataLayer>
     }
 
     List<ContextMenuEntry> editorContextMenuEntries(Offset position) {
-      final worldPosition = screenToWorld(
-        position,
-        offset,
-        zoom,
-      )!;
+      final worldPosition = screenToWorld(position, offset, zoom);
 
       return [
         const MenuHeader(text: "Editor Menu"),
