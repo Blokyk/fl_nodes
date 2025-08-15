@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import '../core/controller/core.dart';
 import '../core/models/entities.dart';
 import '../core/models/styles.dart';
+
 import 'builders.dart';
 import 'default_node_widget.dart';
 
@@ -158,6 +159,10 @@ class NodeEditorRenderObjectWidget extends MultiChildRenderObjectWidget {
       linkStyle: link.style,
     );
   }
+
+  @override
+  List<DiagnosticsNode> debugDescribeChildren() =>
+      super.children.expand((w) => w.debugDescribeChildren()).toList();
 }
 
 class NodeEditorRenderBox extends RenderBox
