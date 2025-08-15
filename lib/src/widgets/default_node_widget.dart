@@ -9,12 +9,12 @@ import 'package:flutter_context_menu/flutter_context_menu.dart';
 
 import 'package:fl_nodes/src/core/utils/renderbox.dart';
 import 'package:fl_nodes/src/widgets/context_menu.dart';
+import 'package:fl_nodes/src/widgets/default_field_widget.dart';
 import 'package:fl_nodes/src/widgets/improved_listener.dart';
 
 import '../constants.dart';
 import '../core/controller/core.dart';
 import '../core/models/entities.dart';
-import '../core/models/events.dart';
 import '../core/models/styles.dart';
 
 import 'builders.dart';
@@ -243,56 +243,17 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
     widget.controller.clearTempLink();
   }
 
-  /// UPDATED _buildField:
-  /// This method now always wraps the field content in a GestureDetector that
-  /// handles tap events—even when a custom fieldBuilder is provided.
   Widget _buildField(FieldInstance field) {
     if (widget.node.state.isCollapsed) {
       return SizedBox(key: field.key, height: 0, width: 0);
+    } else {
+      return DefaultFieldWidget(
+        field: field,
+        node: widget.node,
+        fieldBuilder: widget.fieldBuilder,
+        controller: widget.controller,
+      );
     }
-
-    // Get the field content either from the custom builder or use default visualizer.
-    final fieldContent = widget.fieldBuilder != null
-        ? widget.fieldBuilder!(context, field, widget.node.builtStyle)
-        : Container(
-            padding: field.prototype.style.padding,
-            decoration: field.prototype.style.decoration,
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    field.prototype.displayName,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: field.prototype.visualizerBuilder(field.data)),
-              ],
-            ),
-          );
-
-    // Wrap the content with a GestureDetector to ensure tap handling.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: GestureDetector(
-        onTapDown: (details) {
-          if (field.prototype.onVisualizerTap != null) {
-            field.prototype.onVisualizerTap!(field.data, (dynamic data) {
-              widget.controller.setFieldData(
-                widget.node.id,
-                field.prototype.idName,
-                data: data,
-                eventType: FieldEventType.submit,
-              );
-            });
-          } else {
-            _showFieldEditorOverlay(widget.node.id, field, details);
-          }
-        },
-        child: fieldContent,
-      ),
-    );
   }
 
   Widget _buildPort(PortInstance port) {
@@ -347,49 +308,6 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
       if (fields.isNotEmpty) const SizedBox(height: 16),
       ...fields.map((field) => _buildField(field)),
     ];
-  }
-
-  void _showFieldEditorOverlay(
-    String nodeId,
-    FieldInstance field,
-    TapDownDetails details,
-  ) {
-    final overlay = Overlay.of(context);
-    OverlayEntry? overlayEntry;
-
-    overlayEntry = OverlayEntry(
-      builder: (context) {
-        return Stack(
-          children: [
-            GestureDetector(
-              onTap: () => overlayEntry?.remove(),
-              child: Container(color: Colors.transparent),
-            ),
-            Positioned(
-              left: details.globalPosition.dx,
-              top: details.globalPosition.dy,
-              child: Material(
-                child: field.prototype.editorBuilder!(
-                  context,
-                  () => overlayEntry?.remove(),
-                  field.data,
-                  (dynamic data, {required FieldEventType eventType}) {
-                    widget.controller.setFieldData(
-                      nodeId,
-                      field.prototype.idName,
-                      data: data,
-                      eventType: eventType,
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    overlay.insert(overlayEntry);
   }
 
   void selectNode() {
