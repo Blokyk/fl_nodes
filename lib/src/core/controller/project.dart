@@ -4,10 +4,20 @@ import 'package:fl_nodes/src/core/controller/callback.dart';
 import 'package:fl_nodes/src/core/controller/core.dart';
 import 'package:fl_nodes/src/core/events/events.dart';
 import 'package:fl_nodes/src/core/localization/delegate.dart';
+import 'package:fl_nodes/src/core/utils/version.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/data.dart';
+
+/// The minimum version of the `fl_nodes` package that must have saved the project
+/// for it to be compatible with the current version
+const kMinFlNodeSaveVersion = '0.3.3'; // just type it as a string so it's const
+const _kMinFlNodeSaveVersion = Version(0, 3, 3);
+
+// 0.3.2 was the version right before we introduced versioning to save files,
+// so just assume it's at best that version if it doesn't have a version
+const _kMissingFlNodeSaveVersion = Version(0, 3, 2);
 
 typedef ProjectSaver = Future<bool> Function(Map<String, dynamic> jsonData);
 typedef ProjectLoader = Future<Map<String, dynamic>?> Function(bool isSaved);
@@ -147,6 +157,7 @@ class FlNodeEditorProject {
         .toList();
 
     return {
+      'version': _kMinFlNodeSaveVersion,
       'viewport': {
         'offset': [viewportOffset.dx, viewportOffset.dy],
         'zoom': viewportZoom,
@@ -226,7 +237,7 @@ class FlNodeEditorProject {
     );
   }
 
-  /// This method wraps [_fromJson] and adds additional
+  /// This method wraps [_fromJson], and adds additional checks and error information
   ///
   /// The behavior of this method is determined by the [projectLoader] callback and user defined logic.
   ///
@@ -248,6 +259,20 @@ class FlNodeEditorProject {
         strings.failedToLoadProjectErrorMsg('jsonData == null'),
       );
       return;
+    }
+
+    // load the save's version (and fallback to the special kMissingVersion otherwise)
+    final versionStr = jsonData['version'] as String?;
+    final version = Version.tryParse(versionStr) ?? _kMissingFlNodeSaveVersion;
+
+    // if it's lower than our required minimum version, then warn the user this might fail
+    if (version < _kMinFlNodeSaveVersion) {
+      controller.onCallback?.call(
+        FlCallbackType.warning,
+        'Project has version $version, but this app is'
+        ' only compatible with version $kMinFlNodeSaveVersion and up.'
+        ' Project might not load correctly.',
+      );
     }
 
     controller.clear();
